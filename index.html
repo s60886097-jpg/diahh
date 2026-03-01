@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>ZENPOS</title>
+
+<style>
+body{
+margin:0;
+font-family:Arial;
+background:#eef2f7;
+}
+
+header{
+background:#2c3e50;
+color:white;
+padding:15px;
+display:flex;
+justify-content:space-between;
+}
+
+button{
+padding:8px 12px;
+border:none;
+border-radius:5px;
+cursor:pointer;
+}
+
+.primary{background:#3498db;color:white;}
+.success{background:#2ecc71;color:white;}
+.danger{background:#e74c3c;color:white;}
+
+section{display:none;padding:30px;}
+.active{display:block;}
+
+.card{
+background:white;
+padding:20px;
+border-radius:10px;
+box-shadow:0 4px 15px rgba(0,0,0,0.1);
+margin-bottom:20px;
+}
+
+input{
+width:100%;
+padding:8px;
+margin:5px 0;
+border:1px solid #ccc;
+border-radius:5px;
+}
+
+.stats{
+display:flex;
+gap:20px;
+}
+
+.stat-box{
+flex:1;
+background:#3498db;
+color:white;
+padding:20px;
+border-radius:10px;
+text-align:center;
+}
+
+table{
+width:100%;
+border-collapse:collapse;
+margin-top:10px;
+}
+
+th,td{
+padding:10px;
+border:1px solid #ddd;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+<h2>ZENPOS</h2>
+<div>
+<button onclick="show('login')" class="primary">Login</button>
+<button onclick="show('register')" class="success">Daftar</button>
+<button onclick="logout()" class="danger">Logout</button>
+</div>
+</header>
+
+<!-- HOME -->
+<section id="home" class="active">
+<div class="card">
+<h1>ZENPOS Smart Cashier</h1>
+<p>Aplikasi POS Modern dengan Dashboard Statistik</p>
+<button class="primary" onclick="show('login')">Mulai</button>
+</div>
+</section>
+
+<!-- LOGIN -->
+<section id="login">
+<div class="card">
+<h2>Login</h2>
+<input type="email" id="loginEmail" placeholder="Email">
+<input type="password" id="loginPass" placeholder="Password">
+<button class="primary" onclick="login()">Login</button>
+</div>
+</section>
+
+<!-- REGISTER -->
+<section id="register">
+<div class="card">
+<h2>Daftar</h2>
+<input type="text" id="regName" placeholder="Nama">
+<input type="email" id="regEmail" placeholder="Email">
+<input type="password" id="regPass" placeholder="Password">
+<button class="success" onclick="register()">Daftar</button>
+</div>
+</section>
+
+<!-- DASHBOARD -->
+<section id="dashboard">
+
+<div class="stats">
+<div class="stat-box">
+<h3 id="totalProduct">0</h3>
+<p>Total Produk</p>
+</div>
+
+<div class="stat-box" style="background:#2ecc71;">
+<h3 id="totalStock">0</h3>
+<p>Total Stok</p>
+</div>
+</div>
+
+<div class="card">
+<h3>Edit Profile</h3>
+<input type="text" id="editName">
+<input type="email" id="editEmail">
+<button class="success" onclick="saveProfile()">Simpan</button>
+</div>
+
+<div class="card">
+<h3>Tambah Produk</h3>
+<input type="text" id="prodName" placeholder="Nama Produk">
+<input type="number" id="prodStock" placeholder="Stok">
+<input type="number" id="prodPrice" placeholder="Harga">
+<button class="primary" onclick="addProduct()">Tambah</button>
+
+<table>
+<thead>
+<tr>
+<th>Nama</th>
+<th>Stok</th>
+<th>Harga</th>
+<th>Aksi</th>
+</tr>
+</thead>
+<tbody id="prodList"></tbody>
+</table>
+</div>
+
+</section>
+
+<script>
+
+let currentUser=null;
+let editIndex=null;
+
+function show(id){
+document.querySelectorAll("section").forEach(s=>s.classList.remove("active"));
+document.getElementById(id).classList.add("active");
+}
+
+function register(){
+let users=JSON.parse(localStorage.getItem("users"))||[];
+users.push({
+name:regName.value,
+email:regEmail.value,
+pass:regPass.value
+});
+localStorage.setItem("users",JSON.stringify(users));
+alert("Akun berhasil dibuat");
+show("login");
+}
+
+function login(){
+let users=JSON.parse(localStorage.getItem("users"))||[];
+let user=users.find(u=>u.email===loginEmail.value && u.pass===loginPass.value);
+
+if(user){
+currentUser=user;
+editName.value=user.name;
+editEmail.value=user.email;
+
+if(!localStorage.getItem("products")){
+let sample=[
+{name:"Keyboard",stock:10,price:150000},
+{name:"Mouse",stock:15,price:80000}
+];
+localStorage.setItem("products",JSON.stringify(sample));
+}
+
+show("dashboard");
+loadProducts();
+}else{
+alert("Akun tidak ditemukan");
+}
+}
+
+function logout(){
+currentUser=null;
+show("home");
+}
+
+function saveProfile(){
+currentUser.name=editName.value;
+currentUser.email=editEmail.value;
+alert("Profile diperbarui");
+}
+
+function addProduct(){
+let products=JSON.parse(localStorage.getItem("products"))||[];
+
+let data={
+name:prodName.value,
+stock:Number(prodStock.value),
+price:Number(prodPrice.value)
+};
+
+if(editIndex!==null){
+products[editIndex]=data;
+editIndex=null;
+}else{
+products.push(data);
+}
+
+localStorage.setItem("products",JSON.stringify(products));
+loadProducts();
+}
+
+function loadProducts(){
+let products=JSON.parse(localStorage.getItem("products"))||[];
+let html="";
+let totalStock=0;
+
+products.forEach((p,i)=>{
+totalStock+=p.stock;
+html+=`
+<tr>
+<td>${p.name}</td>
+<td>${p.stock}</td>
+<td>Rp ${p.price}</td>
+<td>
+<button onclick="editProduct(${i})" class="primary">Edit</button>
+<button onclick="deleteProduct(${i})" class="danger">Hapus</button>
+</td>
+</tr>
+`;
+});
+
+prodList.innerHTML=html;
+totalProduct.innerText=products.length;
+totalStock.innerText=totalStock;
+}
+
+function deleteProduct(i){
+let products=JSON.parse(localStorage.getItem("products"));
+products.splice(i,1);
+localStorage.setItem("products",JSON.stringify(products));
+loadProducts();
+}
+
+function editProduct(i){
+let products=JSON.parse(localStorage.getItem("products"));
+prodName.value=products[i].name;
+prodStock.value=products[i].stock;
+prodPrice.value=products[i].price;
+editIndex=i;
+}
+
+</script>
+
+</body>
+</html>
